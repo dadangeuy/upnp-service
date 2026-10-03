@@ -8,14 +8,10 @@ Add an additional tool to the toolkit of avid homelabbers or individuals who mig
 
 ## Pulling the Container
 
-[ghcr](https://github.com/ProjectInitiative/upnp-service/pkgs/container/upnp-service)
-
-[Docker Hub](https://hub.docker.com/repository/docker/projectinitiative/upnp-service)
+[ghcr](https://github.com/dadangeuy/upnp-service/pkgs/container/upnp-service)
 
 ```bash
-docker pull projectinitiative/upnp-service:latest
-# OR
-docker pull ghcr.io/projectinitiative/upnp-service:latest
+docker pull ghcr.io/dadangeuy/upnp-service:latest
 ```
 
 ## Usage
@@ -28,7 +24,7 @@ Don't forget that you need to forward ports on the host as well! (e.g., `docker 
 
 The config JSON lives in `/etc/upnp-service/upnp.json`. This file will need to be mounted or edited in the container, or defined via a Docker Compose `configs:` section.
 
-The config JSON describes an array of `apps`, each of which can have port redirections (forwards). Note the internal port comes first, and the external port comes second, which is the opposite order from what Docker uses.
+The config JSON describes an array of `port forwards`, containing the `description`, `external_port`, `internal_port`, and `protocol` that will be exposed.
 
 If the internal and external ports are the same, only one needs to be specified.
 
@@ -36,15 +32,19 @@ Here is a sample of the data required to run properly:
 
 ```JSON
 {
-    "apps":
-    [
-        {
-            "app_name": "syntax_sample",
-            "redirections": [
-                ["OPTIONAL_INTERNAL_PORT","EXTERNAL_PORT","PROTOCOL"]
-            ]
-        }
-    ]
+  "port_forwards": [
+    {
+      "description": "sample-external",
+      "external_port": "9991",
+      "protocol": "UDP"
+    },
+    {
+      "description": "sample-internal-and-external",
+      "internal_port": "9992",
+      "external_port": "9993",
+      "protocol": "TCP"
+    }
+  ]
 }
 ```
 
@@ -61,54 +61,44 @@ configs:
   upnp_json:
     content: |
       {
-          "apps":
-          [
-              {
-                  "app_name": "first_whoami",
-                  "redirections": [
-                      ["8081","80","TCP"]
-                  ]
-              },
-              {
-                  "app_name": "second_whoami",
-                  "redirections": [
-                      ["8082","8080","TCP"]
-                  ]
-              },
-              {
-                  "app_name": "third_whoami",
-                  "redirections": [
-                      ["8083","TCP"]
-                  ]
-              }
-          ]
+        "port_forwards": [
+          {
+            "description": "first_whoami",
+            "external_port": "8081",
+            "protocol": "TCP"
+          },
+          {
+            "description": "second_whoami",
+            "internal_port": "8082",
+            "external_port": "8080",
+            "protocol": "TCP"
+          }
+        ]
       }
 services:
   first_whoami:
     image: traefik/whoami
     ports:
-      - '8081:80'
+      - "8081:80"
   second_whoami:
     image: traefik/whoami
     ports:
-      - '8082:80'
-  third_whoami:
-    image: traefik/whoami
-    ports:
-      - '8083:80'
+      - "8082:80"
   upnp-service:
-    image: 'projectinitiative/upnp-service:latest'
-    network_mode: host
+    image: dadangeuy/upnp-service:latest
     configs:
       - source: upnp_json
         target: /etc/upnp-service/upnp.json
+    network_mode: host # works while the container runs
+    build:
+      context: docker-image
+      network: host # works during the build if needed
 ```
 
 ## Building from Source
 
 ```bash
-cd $PROJ_DIR
-docker build -t $TAG -f $PROJ_DIR/docker-image/Dockerfile $PROJ_DIR/docker-image
+make build
 ```
 
 ## Additional Info
