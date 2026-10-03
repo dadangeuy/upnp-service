@@ -2,27 +2,19 @@ configs:
   upnp_json:
     content: |
       {
-          "apps":
-          [
-              {
-                  "app_name": "first_whoami",
-                  "redirections": [
-                      ["8081","80","TCP"]
-                  ]
-              },
-              {
-                  "app_name": "second_whoami",
-                  "redirections": [
-                      ["8082","8080","TCP"]
-                  ]
-              },
-              {
-                  "app_name": "third_whoami",
-                  "redirections": [
-                      ["8083","TCP"]
-                  ]
-              }
-          ]
+        "port_forwards": [
+          {
+            "description": "first_whoami",
+            "external_port": "8081",
+            "protocol": "TCP"
+          },
+          {
+            "description": "second_whoami",
+            "internal_port": "8082",
+            "external_port": "8080",
+            "protocol": "TCP"
+          }
+        ]
       }
 services:
   first_whoami:
@@ -33,16 +25,12 @@ services:
     image: traefik/whoami
     ports:
       - "8082:80"
-  third_whoami:
-    image: traefik/whoami
-    ports:
-      - "8083:80"
   upnp-service:
-    image: "projectinitiative/upnp-service:latest"
+    image: "dadangeuy/upnp-service:latest"
     configs:
       - source: upnp_json
         target: /etc/upnp-service/upnp.json
     network_mode: host # works while the container runs
     build:
-      context: .
+      context: docker-image
       network: host # works during the build if needed

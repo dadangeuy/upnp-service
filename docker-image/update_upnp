@@ -1,34 +1,30 @@
 #!/usr/bin/env bash
 
-update_upnp()
-{
-    APP_NAME=$1
-    shift
-    local REDIRECTIONS=""
-    while (( "$#" )); do
-        REDIRECTIONS="$REDIRECTIONS $1"
-        shift
-    done
+update_upnp() {
+  DESCRIPTION=$1
+  INTERNAL_PORT=$2
+  EXTERNAL_PORT=$3
+  PROTOCOL=$4
 
-    printf '%s\n' "Updating UPnP entry with redirections [$REDIRECTIONS]"
+  printf "%s\n" "Deleting UPnP entry (if exists) [$EXTERNAL_PORT $PROTOCOL]"
+  upnpc -f "$EXTERNAL_PORT" "$PROTOCOL"
+  printf "%s\n" "Adding UPnP entry [$INTERNAL_PORT $EXTERNAL_PORT $PROTOCOL]"
+  upnpc -e "$DESCRIPTION" -r "$INTERNAL_PORT" "$EXTERNAL_PORT" "$PROTOCOL"
 
-    GATEWAY=$(ip route | head -1 | awk '{print $3}')
-    printf '%s\n' "Detected gateway is [$GATEWAY]"
-
-    upnpc -e "$APP_NAME" -r $REDIRECTIONS
-
-    printf '%s\n' "Done updating UPnP entry with port redirections [$REDIRECTIONS]"
+  printf '%s\n' "Done updating UPnP entry with port redirections [$INTERNAL_PORT $EXTERNAL_PORT $PROTOCOL]"
 }
 
-MASTER_CONFIG_DIR="/etc/upnp-service"
-MASTER_CONFIG="$MASTER_CONFIG_DIR/upnp.json"
+GATEWAY=$(ip route | head -1 | awk '{print $3}')
+printf '%s\n' "Detected gateway is [$GATEWAY]"
 
+CONFIG="/etc/upnp-service/upnp.json"
+LENGTH=$(jq ".port_forwards | length" $CONFIG)
 
-#Parse config file
+for ((i = 0; i < LENGTH; i++)); do
+  DESCRIPTION=$(jq -r ".port_forwards[$i].description" $CONFIG)
+  INTERNAL_PORT=$(jq -r ".port_forwards[$i] | .internal_port // .external_port"  $CONFIG)
+  EXTERNAL_PORT=$(jq -r ".port_forwards[$i].external_port" $CONFIG)
+  PROTOCOL=$(jq -r ".port_forwards[$i].protocol" $CONFIG)
 
-declare -A REDIRECTIONS
-for APP_NAME in $(jq -r '.apps[]|.app_name' $MASTER_CONFIG)
-do
-    REDIRECTIONS[$APP_NAME]=$(jq -r '.apps[]|select(.app_name=='\"$APP_NAME\"').redirections[][]' $MASTER_CONFIG)
-    update_upnp "$APP_NAME" ${REDIRECTIONS[$APP_NAME]}
+  update_upnp "$DESCRIPTION" "$INTERNAL_PORT" "$EXTERNAL_PORT" "$PROTOCOL"
 done

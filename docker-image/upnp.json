@@ -1,20 +1,15 @@
 {
-    "apps":
-    [
-        {
-            "app_name": "app1",
-            "redirections": [
-                ["801", "TCP"],
-                ["80801","80801","TCP"],
-                ["80801","80801","UDP"]
-            ]
-        },
-        {
-            "app_name": "app2",
-            "redirections": [
-                ["4333","TCP"],
-                ["4332","4334","TCP"]
-            ]
-        }
-    ]
+  "port_forwards": [
+    {
+      "description": "sample-external",
+      "external_port": "123",
+      "protocol": "UDP"
+    },
+    {
+      "description": "sample-internal-and-external",
+      "internal_port": "2",
+      "external_port": "25565",
+      "protocol": "TCP"
+    }
+  ]
 }
