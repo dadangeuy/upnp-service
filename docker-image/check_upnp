@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+LOCAL_IP=$(upnpc -l | grep "Local LAN ip address" | awk '{print $NF}')
+printf '%s\n' "Detected local ip is [$LOCAL_IP]"
+
+CONFIG="/etc/upnp-service/upnp.json"
+LENGTH=$(jq ".port_forwards | length" $CONFIG)
+
+for ((i = 0; i < LENGTH; i++)); do
+  INTERNAL_PORT=$(jq -r ".port_forwards[$i] | .internal_port // .external_port"  $CONFIG)
+  EXTERNAL_PORT=$(jq -r ".port_forwards[$i].external_port" $CONFIG)
+  PROTOCOL=$(jq -r ".port_forwards[$i].protocol" $CONFIG)
+
+  if upnpc -l | grep -E "${PROTOCOL}[[:blank:]]+${EXTERNAL_PORT}->${LOCAL_IP}:${INTERNAL_PORT}"; then
+    printf "%s\n" "UPnP entry exists [$INTERNAL_PORT $EXTERNAL_PORT $PROTOCOL]"
+  else
+    printf "%s\n" "UPnP entry did not exists [$INTERNAL_PORT $EXTERNAL_PORT $PROTOCOL]"
+    exit 1
+  fi
+done

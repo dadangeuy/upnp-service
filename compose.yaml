@@ -31,6 +31,8 @@ services:
       - source: upnp_json
         target: /etc/upnp-service/upnp.json
     network_mode: host # works while the container runs
+    healthcheck:
+      test: check_upnp
     build:
       context: docker-image
       network: host # works during the build if needed
